@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        #addTask{
+            display: flex;
+        }
+        input,button{
+            padding: 10px;
+            margin: 10px;
+        }
+        input{
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="addTask">
+        <input type="text" id="taskTitle">
+        <button onclick="addTask()">Add Task</button>
+    </div>
+    <div id="container">
+
+    </div>
+    
+
+</body>
+</html>
+<script>
+    let container = document.getElementById('container');
+    let taskTitle = document.getElementById('taskTitle');
+    let tasks = [];
+    window.onload = ()=>{
+        displayTask();
+    }
+
+    // add task
+
+    async function addTask(){
+        let taskTitle = document.getElementById('taskTitle');
+        let task = {
+            title : taskTitle.value,
+            isComplete : false
+        }
+        try {
+            await fetch('https://task-manager-5dd12-default-rtdb.asia-southeast1.firebasedatabase.app/task-title.json',{
+            method: 'POST',
+            headers:{
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(task)
+        }) 
+            alert('Task Added')
+        } catch (error) {
+            alert('Failed to add Task')
+        }
+
+        taskTitle.value='';
+        displayTask();
+    }
+
+    // display task
+
+    async function displayTask(){
+        
+        container.innerHTML="";
+        let data= [];
+        try {
+            let res = await fetch('https://task-manager-5dd12-default-rtdb.asia-southeast1.firebasedatabase.app/task-title.json');
+            data = await res.json();
+            
+        } catch (error) {
+            
+        }
+        task = Object.entries(data).map(([id,task])=>({id,...task}));
+        task.forEach((item)=>{
+            let div = document.createElement('div');
+            let check = document.createElement('input');
+            check.type = 'checkbox';
+            let title = document.createElement('input');
+            title.value = item.title;
+            let del = document.createElement('button');
+            del.innerText = "Delete";
+            del.addEventListener('click',()=>{
+                deleteTask(item.id);
+                div.remove();
+            })
+            let checkValue = item.isComplete;
+            if(item.isComplete){
+                check.checked = true;
+                title.style.textDecoration = 'line-through';
+                title.style.color = 'grey';
+            }else{
+                check.checked = false;
+                title.style.textDecoration = 'none';
+                title.style.color = 'black';
+            }
+
+            // checkbox event listner
+
+
+            check.addEventListener('click',()=>{
+                checkValue = !checkValue;
+                if(checkValue){
+                    title.style.textDecoration = 'line-through';
+                    title.style.color = 'grey';
+                }else{
+                    title.style.textDecoration = 'none';
+                    title.style.color = 'black';
+                }
+
+                let taskItem = {
+                    title : item.title,
+                    isComplete : checkValue
+                }
+
+                fetch(`https://task-manager-5dd12-default-rtdb.asia-southeast1.firebasedatabase.app/task-title/${item.id}.json`,{
+                    method : 'PATCH',
+                    headers : {
+                        'Content-Type': 'application/json'
+                    },
+                    body : JSON.stringify(taskItem)
+                })
+            })
+            
+            //title change event listner
+        
+            title.addEventListener('change',()=>{
+                let taskItem = {
+                    title : title.value,
+                    isComplete : checkValue
+                }
+
+                fetch(`https://task-manager-5dd12-default-rtdb.asia-southeast1.firebasedatabase.app/task-title/${item.id}.json`,{
+                    method : 'PATCH',
+                    headers : {
+                        'Content-Type': 'application/json'
+                    },
+                    body : JSON.stringify(taskItem)
+                })
+            })
+            div.append(check,title,del);
+            container.append(div);  
+        })
+    }
+
+    // delete task
+
+    async function deleteTask(id){
+        fetch(`https://task-manager-5dd12-default-rtdb.asia-southeast1.firebasedatabase.app/task-title/${id}.json`,{
+                    method : 'DELETE',
+                    headers : {
+                        'Content-Type': 'application/json'
+                    }
+                })
+
+    }
+
+</script>
